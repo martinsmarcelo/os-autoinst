@@ -8,7 +8,10 @@
 # without any warranty.
 
 # Summary: send an email using SMTP and receive it using IMAP
+#          added multimachine server using SSL.
 # Maintainer: Paolo Stivanin <pstivanin@suse.com>
+#       Multimachine: Marcelo Martins <mmartins@suse.com>
+
 
 package thunderbird_common;
 
@@ -34,6 +37,7 @@ C<$account> can be C<internal_account_A> or C<internal_account_B>.
 
 =cut
 sub tb_setup_account {
+    my $hostname = get_var('HOSTNAME');
     my ($self, $proto, $account) = @_;
 
     my $config          = $self->getconfig_emailaccount;
@@ -60,22 +64,38 @@ sub tb_setup_account {
         assert_screen 'thunderbird_wizard-imap-pop-open';
         send_key 'down';
         send_key 'ret';
+        # If use multimachine, select correct needles to configure thunderbird.
+        if ($hostname eq 'client') {
+            assert_and_click 'thunderbird_SSL_auth_click';
+            send_key 'down';
+            send_key 'ret';
+        }
     }
     assert_screen "thunderbird_wizard-$proto-selected";
 
-    assert_and_click 'thunderbird_startssl-selected-for-imap';
-    assert_and_click 'thunderbird_security-select-none';
-    assert_and_click 'thunderbird_startssl-selected-for-smtp';
-    assert_and_click 'thunderbird_security-select-none';
-    assert_and_click 'thunderbird_wizard-retest';
-    assert_and_click 'thunderbird_wizard-done';
-    assert_and_click 'thunderbird_I-understand-the-risks';
-    assert_and_click 'thunderbird_risks-done';
+    # If use multimachine, select correct needles to configure thunderbird.
+    if ($hostname ne 'client') {
+        assert_and_click 'thunderbird_startssl-selected-for-imap';
+        assert_and_click 'thunderbird_security-select-none';
+        assert_and_click 'thunderbird_startssl-selected-for-smtp';
+        assert_and_click 'thunderbird_security-select-none';
+        assert_and_click 'thunderbird_wizard-retest';
+        assert_and_click 'thunderbird_wizard-done';
+        assert_and_click 'thunderbird_I-understand-the-risks';
+        assert_and_click 'thunderbird_risks-done';
+        # skip additional integrations
+        assert_and_click "thunderbird_skip-system-integration";
+        assert_and_click "thunderbird_get-messages";
+    }
+    # if using multimachine mail_server with SSL
+    else {
+        assert_and_click "thunderbird_SSL_advanced_config";
+        assert_and_click "thunderbird_SSL_ok_config";
+        assert_and_click "thunderbird_skip-system-integration";
+        assert_and_click "thunderbird_confirm_security_exception";
+        assert_and_click "thunderbird_get-messages";
+    }
 
-    # skip additional integrations
-    assert_and_click "thunderbird_skip-system-integration";
-
-    assert_and_click "thunderbird_get-messages";
 }
 
 =head2 tb_send_message
@@ -88,6 +108,7 @@ Returns email subject.
 
 =cut
 sub tb_send_message {
+    my $hostname = get_var('HOSTNAME');
     my ($self, $account) = @_;
 
     my $config       = $self->getconfig_emailaccount;
@@ -104,11 +125,27 @@ sub tb_send_message {
 
     send_key "tab";
     type_string "Test email send and receive.";
-    send_key "ctrl-ret";
-    # we can't use "ret" because it doesn't always work
-    assert_and_click "thunderbird_really-send-message";
+    #send_key "ctrl-ret";
+    assert_and_click "thunderbird_send-message";
+    if ($hostname eq 'client') {
 
-    assert_screen 'thunderbird_sent-folder-appeared';
+        if (is_sle('<15')) {
+            assert_and_click "thunderbird_really-send-message";
+        }
+        assert_and_click "thunderbird_SSL_error_security_exception";
+        assert_and_click "thunderbird_confirm_security_exception";
+
+        # Windows move to behind, return focus to sent.
+        hold_key "alt";
+        send_key "tab";
+        assert_and_click "thunderbird-focus-sent-email";
+        release_key "alt";
+
+        assert_and_click "thunderbird_maximized_send-message";
+    }
+    else {
+        assert_screen 'thunderbird_sent-folder-appeared';
+    }
 
     return $mail_subject;
 }

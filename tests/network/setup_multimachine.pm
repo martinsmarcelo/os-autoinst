@@ -37,6 +37,14 @@ sub run {
     }
     else {
         setup_static_mm_network('10.0.2.102/24');
+        my $base_product = script_output("grep SLED /etc/os-release | cut -d'=' -f2 | sed 's/\"//g'");
+        if ($base_product eq "SLED") {
+            assert_script_run 'systemctl stop NetworkManager';
+            assert_script_run 'systemctl disable NetworkManager';
+            assert_script_run 'systemctl enable wicked';
+            assert_script_run 'systemctl start  wicked';
+        }
+
     }
 
     # Set the hostname to identify both minions

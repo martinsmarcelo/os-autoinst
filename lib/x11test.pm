@@ -208,6 +208,26 @@ imapport =993
 recvServer = localhost
 sendServer = localhost
 sendport =25
+
+internal_account_C]
+user =admin
+mailbox =admin@server
+passwd =password123
+recvport =995
+imapport =993
+recvServer =10.0.2.101
+sendServer =10.0.2.101
+sendport =25
+
+[internal_account_D]
+user =nimda
+mailbox =nimda@server
+passwd =password123
+recvport =995
+imapport =993
+recvServer =10.0.2.101
+sendServer =10.0.2.101
+sendport =25
 END_LOCAL_CONFIG
 
     my $config = Config::Tiny->new;
@@ -466,8 +486,11 @@ sub setup_mail_account {
         send_key "alt-m";
     };
     send_key "ret";
-    send_key_until_needlematch "evolution_wizard-sending-starttls", "down", 5, 3;
-    send_key "ret";
+
+    #change to use mail-server and SSL
+    #send_key_until_needlematch "evolution_wizard-sending-starttls", "down", 5, 3;
+    #send_key "ret";
+    assert_and_click "evolution_SSL_wizard-sending-starttls";
 
     #Known issue: hot key 'alt-y' doesn't work
     #wait_screen_change {
@@ -477,9 +500,14 @@ sub setup_mail_account {
     #send_key_until_needlematch "evolution_wizard-sending-authtype", "down", 5, 3;
     #send_key "ret";
     #Workaround of above issue: click the 'Check' button
+
     assert_and_click "evolution_wizard-sending-setauthtype";
-    send_key_until_needlematch "evolution_wizard-sending-authtype", "down", 5, 3;
-    send_key "ret";
+
+    #change hot key
+    #send_key_until_needlematch "evolution_wizard-sending-authtype", "down", 5, 3;
+    #send_key "ret";
+    assert_and_click "evolution_wizard-sending-setauthtype_login";
+
     wait_screen_change { send_key 'alt-n' };
     type_string "$mail_user";
     send_key $self->{next};
