@@ -30,6 +30,14 @@ sub run {
     my $children = get_children();
     my $child_id = (keys %$children)[0];
     mutex_wait('MAIL_DONE', $child_id,);
-    record_info 'Mail Done', 'Mail client test done.';
+    #record_info 'Mail Done', 'Mail client test done.';
 }
+
+sub post_fail_hook {
+    my $self = shift;
+    select_console 'log-console';
+    $self->save_and_upload_log("dmesg",                 "dmesg.log",      {screenshot => 1});
+    $self->save_and_upload_log("journalctl --no-pager", "journalctl.log", {screenshot => 1});
+}
+
 1;

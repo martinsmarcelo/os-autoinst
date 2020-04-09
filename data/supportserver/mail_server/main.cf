@@ -711,7 +711,7 @@ myhostname = server
 mydestination = $myhostname, localhost.$mydomain
 mynetworks_style = subnet
 #relayhost = $myhostname
-mynetworks = 192.168.0.0/24, 127.0.0.0/8
+mynetworks = 10.0.2.0/24, 127.0.0.0/8
 mydomain = server
 relay_domains = server
 

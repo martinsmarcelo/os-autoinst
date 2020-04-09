@@ -25,7 +25,7 @@ use base "thunderbird_common";
 
 sub run {
     my $self    = shift;
-    my $account = "internal_account_A";
+    my $account = "internal_account_C";
 
     mouse_hide(1);
     # clean up and start thunderbird

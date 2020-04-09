@@ -18,6 +18,7 @@ use lockapi;
 use mm_network 'setup_static_mm_network';
 use utils 'zypper_call';
 use Utils::Systemd 'disable_and_stop_service';
+use version_utils 'is_sle';
 
 sub run {
     my ($self) = @_;
@@ -30,21 +31,46 @@ sub run {
 
     # Configure static network, disable firewall
     disable_and_stop_service($self->firewall);
+    script_run("systemctl disable apparmor.service");
+    script_run("systemctl stop apparmor.service");
+    #disable_and_stop_service($self->apparmor);
 
     # Configure the internal network an  try it
     if ($hostname =~ /server|master/) {
         setup_static_mm_network('10.0.2.101/24');
+        #if server running opensuse.
+        my $base_product_opensuse = get_var('DISTRI');
+        if ($base_product_opensuse eq "opensuse") {
+            assert_script_run 'systemctl stop NetworkManager';
+            assert_script_run 'systemctl disable NetworkManager';
+            assert_script_run 'systemctl start  wicked';
+            assert_script_run('echo "195.135.221.150 openqa.opensuse.org" >> /etc/hosts');
+        }
+
     }
     else {
         setup_static_mm_network('10.0.2.102/24');
-        my $base_product = script_output("grep SLED /etc/os-release | cut -d'=' -f2 | sed 's/\"//g'");
-        if ($base_product eq "SLED") {
+        my $base_product = get_var('SLE_PRODUCT');
+        #script_output("grep SLED /etc/os-release | cut -d'=' -f2 | sed 's/\"//g'");
+        if ($base_product eq "sled") {
+            if (is_sle('=15')) {
+                assert_script_run 'systemctl restart  wicked';
+            }
+            else {
+                assert_script_run 'systemctl stop NetworkManager';
+                assert_script_run 'systemctl disable NetworkManager';
+                assert_script_run 'systemctl enable wicked';
+                assert_script_run 'systemctl start  wicked';
+            }
+        }
+        #Opensuse versions
+        my $base_product_opensuse = get_var('DISTRI');
+        if ($base_product_opensuse eq "opensuse") {
             assert_script_run 'systemctl stop NetworkManager';
             assert_script_run 'systemctl disable NetworkManager';
-            assert_script_run 'systemctl enable wicked';
             assert_script_run 'systemctl start  wicked';
+            assert_script_run('echo "195.135.221.150 openqa.opensuse.org" >> /etc/hosts');
         }
-
     }
 
     # Set the hostname to identify both minions

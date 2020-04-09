@@ -20,7 +20,7 @@ use warnings;
 use base "x11test";
 use testapi;
 use utils;
-use version_utils 'is_sle';
+use version_utils qw(is_sle is_tumbleweed);
 
 use base "Exporter";
 use Exporter;
@@ -33,7 +33,7 @@ our @EXPORT = qw(tb_setup_account tb_send_message tb_check_email);
 
 Create an email account in Thunderbird.
 C<$proto> can be C<pop> or C<imap>.
-C<$account> can be C<internal_account_A> or C<internal_account_B>.
+C<$account> can be C<internal_account_A> or C<internal_account_B> or C<internal_account_C> or C<internal_account_D>.
 
 =cut
 sub tb_setup_account {
@@ -59,19 +59,29 @@ sub tb_setup_account {
 
     send_key "alt-c";
 
+
     if ($proto eq 'pop') {
         assert_and_click 'thunderbird_wizard-imap-selected';
-        assert_screen 'thunderbird_wizard-imap-pop-open';
-        send_key 'down';
-        send_key 'ret';
-        # If use multimachine, select correct needles to configure thunderbird.
-        if ($hostname eq 'client') {
+        if (is_tumbleweed) {
+            assert_and_click 'thunderbird_wizard-imap-pop-open';
+            assert_and_click 'thunderbird_SSL_pop3-selection-click-TW';
             assert_and_click 'thunderbird_SSL_auth_click';
+            assert_and_click 'thunderbird_wizard-pop-selected-normal';
+
+        }
+        else {
+            assert_screen 'thunderbird_wizard-imap-pop-open';
             send_key 'down';
             send_key 'ret';
+            # If use multimachine, select correct needles to configure thunderbird.
+            if ($hostname eq 'client') {
+                assert_and_click 'thunderbird_SSL_auth_click';
+                send_key 'down';
+                send_key 'ret';
+            }
+            assert_screen "thunderbird_wizard-$proto-selected";
         }
     }
-    assert_screen "thunderbird_wizard-$proto-selected";
 
     # If use multimachine, select correct needles to configure thunderbird.
     if ($hostname ne 'client') {
@@ -129,18 +139,30 @@ sub tb_send_message {
     assert_and_click "thunderbird_send-message";
     if ($hostname eq 'client') {
 
-        if (is_sle('<15')) {
-            assert_and_click "thunderbird_really-send-message";
+        #if (is_sle)) {
+        if (check_var('SLE_PRODUCT', 'sled')) {
+            assert_and_click "thunderbird_SSL_error_security_exception";
+            #assert_and_click "thunderbird_really-send-message";
+            assert_and_click "thunderbird_confirm_security_exception";
+            # Windows move to behind, return focus to sent.
+            hold_key "alt";
+            send_key "tab";
+            assert_and_click "thunderbird-focus-sent-email";
+            release_key "alt";
         }
-        assert_and_click "thunderbird_SSL_error_security_exception";
-        assert_and_click "thunderbird_confirm_security_exception";
-
-        # Windows move to behind, return focus to sent.
-        hold_key "alt";
-        send_key "tab";
-        assert_and_click "thunderbird-focus-sent-email";
-        release_key "alt";
-
+        if (is_tumbleweed) {
+            assert_and_click "thunderbird_SSL_error_security_exception";
+            assert_and_click "thunderbird_focus_security_exception-TW";
+            assert_and_click "thunderbird_select_security_exception-TW";
+            assert_and_click "thunderbird_confirm_security_exception";
+            assert_and_click "thunderbird_focus_security_exception-TW";
+            assert_and_click "thunderbird_select_sentemail_window-TW";
+            #by any reason, alt+tab not working.
+            #hold_key "alt";
+            #send_key "tab";
+            #assert_and_click "thunderbird-focus-sent-email-teste";
+            #release_key "alt";
+        }
         assert_and_click "thunderbird_maximized_send-message";
     }
     else {
